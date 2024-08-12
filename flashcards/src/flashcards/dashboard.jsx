@@ -12,9 +12,10 @@ const style = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: 'full',
+    maxWidth: 'md',
     bgcolor: 'background.paper',
-    border: '2px solid #000',
+    borderRadius: 'lg',
     boxShadow: 24,
     p: 4,
 };
@@ -25,13 +26,18 @@ const Dashboard = ({cards, setCards})=>{
     const [isEditable, setIsEditable] = useState(false);
     const [updatedAnswer, setUpdatedAnswer] = useState('');
     const [updatedQuestion, setUpdatedQuestion] = useState('');
+    const [updatedID, setUpdatedID] = useState(0);
     const inputRef = useRef(null);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
     const addFlashcard =  ()=>{
        axios.post('http://localhost:8081/flashcards',{newQuestion, newAnswer}).then((res)=>{
            console.log(res.data);
        }).catch((err)=>{
            console.log(err);
        })
+        setNewQuestion('');
+       setNewAnswer('');
     }
     const deleteFlashcard = (index)=>{
         axios.delete('http://localhost:8081/flashcards/'+index).then((res)=>{
@@ -52,6 +58,29 @@ const Dashboard = ({cards, setCards})=>{
             console.log(Err);
         })
     }
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+
+        if (!updatedQuestion || !updatedAnswer) {
+            setError('Both question and answer are required.');
+            return;
+        }
+
+        try {
+            const response = await axios.put(`http://localhost:8081/flashcards/${updatedID}`, {
+                updatedQuestion,
+                updatedAnswer
+            });
+
+            setMessage(response.data.message);
+            setError('');
+        } catch (err) {
+            setError('Failed to update flashcard.');
+            console.log('Error updating flashcard:', err);
+        }
+        setUpdatedQuestion('');
+        setUpdatedAnswer('');
+    };
     return (<>
         <h1 className="text-center font-bold text-4xl fixed bg-white w-full top-7 ">Admin's View</h1>
         <div>
@@ -102,20 +131,17 @@ const Dashboard = ({cards, setCards})=>{
                         <td className="p-4">{card.question}</td>
                         <td className="p-4">{card.answer}</td>
                         <td className="p-4 text-center">
-                            {isEditable ? (
-                                <button onClick={() => {
-                                    setIsEditable(false);
-                                    updateFlashcard(card.id, updatedAnswer, updatedQuestion);
-                                }} className="text-green-500 hover:text-green-700">
-                                    Save
-                                </button>
-                            ) : (
+
+
                                 <button onClick={() => {
                                     setIsEditable(true);
+                                    setUpdatedQuestion(card.question);
+                                    setUpdatedAnswer(card.answer);
+                                    setUpdatedID(card.id);
                                 }} className="text-blue-500 hover:text-blue-700">
                                     Edit
                                 </button>
-                            )}
+
                         </td>
                         <td className="p-4 text-center">
                             <button onClick={() => {
@@ -129,6 +155,50 @@ const Dashboard = ({cards, setCards})=>{
                 ))}
                 </tbody>
             </table>
+            <Modal
+                open={isEditable}
+                onClose={() => {
+                    setIsEditable(false);
+                    setMessage('');
+                    setError('');
+                }}
+                aria-labelledby="modal-title"
+                aria-describedby="modal-description"
+            >
+                <Box sx={style} className="bg-white rounded-lg shadow-lg p-6 mx-4 md:mx-auto max-w-lg">
+                    <h2 className="text-xl font-semibold mb-4">Update Flashcard</h2>
+                    <form onSubmit={handleUpdate} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Question:</label>
+                            <input
+                                type="text"
+                                value={updatedQuestion}
+                                onChange={(e) => setUpdatedQuestion(e.target.value)}
+                                required
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Answer:</label>
+                            <input
+                                type="text"
+                                value={updatedAnswer}
+                                onChange={(e) => setUpdatedAnswer(e.target.value)}
+                                required
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            Save
+                        </button>
+                    </form>
+                    {message && <p className="text-green-600 mt-2">{message}</p>}
+                    {error && <p className="text-red-600 mt-2">{error}</p>}
+                </Box>
+            </Modal>
 
 
         </div>

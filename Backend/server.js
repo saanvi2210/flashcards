@@ -45,17 +45,26 @@ app.put('/flashcards/:id', (req, res) => {
     const id = req.params.id;
     const { updatedQuestion, updatedAnswer } = req.body;
 
+    // Check if the required fields are provided
+    if (!updatedQuestion || !updatedAnswer) {
+        return res.status(400).json({ error: "Both 'updatedQuestion' and 'updatedAnswer' fields are required." });
+    }
+
+    // SQL query to update the flashcard
     const sql = "UPDATE flashcards SET question = ?, answer = ? WHERE id = ?";
+
     db.query(sql, [updatedQuestion, updatedAnswer, id], (err, result) => {
         if (err) {
             console.error("Error updating flashcard:", err);
             return res.status(500).json({ error: "Failed to update flashcard" });
         }
 
+        // Check if any rows were affected
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Flashcard not found" });
         }
 
+        // Successfully updated
         res.json({ message: "Flashcard updated successfully" });
     });
 });
